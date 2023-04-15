@@ -1,0 +1,4 @@
+Windows 10 19044 (Build)
+AMD64 Family 23 Model 24 Stepping 1, AuthenticAMD
+Total physical memory: 8190 MB
+Hard Disk Serial Number: 1385551489

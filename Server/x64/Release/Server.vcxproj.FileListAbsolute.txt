@@ -1,0 +1,2 @@
+C:\Users\gyy\Desktop\test\毕设\C-Windows-Haker-master\Server\x64\Release\Server.exe
+C:\Users\gyy\Desktop\test\毕设\C++-Windows\Server\x64\Release\Server.exe

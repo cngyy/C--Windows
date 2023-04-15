@@ -1,0 +1,2 @@
+C:\Users\gyy\Desktop\test\毕设\C-Windows-Haker-master\Client\x64\Release\Client.exe
+C:\Users\gyy\Desktop\test\毕设\C++-Windows\Client\x64\Release\Client.exe

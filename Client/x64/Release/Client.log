@@ -1,0 +1,7 @@
+﻿  Client.cpp
+  _WIN32_WINNT not defined. Defaulting to _WIN32_WINNT_MAXVER (see WinSDKVer.h)
+  正在生成代码
+  Previous IPDB not found, fall back to full compilation.
+  All 331 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  已完成代码的生成
+  Client.vcxproj -> C:\Users\gyy\Desktop\test\毕设\C++-Windows\Client\x64\Release\Client.exe
